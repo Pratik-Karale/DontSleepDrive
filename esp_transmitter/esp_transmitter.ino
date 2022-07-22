@@ -5,13 +5,13 @@
 #include <ESP8266WiFiMulti.h>
 ESP8266WiFiMulti WiFiMulti;
 
-const char* ssid = "my_ssid";
+const char* ssid = "takeMeToHeaven";
 const char* password = "123456789";
 
 unsigned long startMillis;
 unsigned long currentMillis;
 
-int eyeblinkPin=2;
+int eyeblinkPin=4;
 
 int prevBlinkState=0;
 int currentBlinkState=0;
