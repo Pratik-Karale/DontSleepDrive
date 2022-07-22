@@ -1,81 +1,60 @@
-#include <SPI.h>
-#include <WiFiNINA.h>
-#include "arduino_secrets.h"
-///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-char ssid[] = SECRET_SSID;        // your network SSID (name)
-char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
-int keyIndex = 0;                // your network key Index number (needed only for WEP)
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <Hash.h>
+  #include <ESPAsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 
-int status = WL_IDLE_STATUS;
 
-WiFiServer server(80);
+const int buzzerPin=0;
+const int motorStopPin=2;
 
-void setup() {
-  Serial.begin(9600);
+const char* ssid     = "takeMeToHeaven";
+const char* password = "123456789";
 
-  while (!Serial) {}
 
-  Serial.println("Access Point Web Server");
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
 
-  if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println("Communication with WiFi module failed!");
-    while (true);
 
-  }
+void setup(){
+  pinMode(buzzerPin,OUTPUT);
+  pinMode(motorStopPin,OUTPUT);
+  // Serial port for debugging purposes
+  Serial.begin(115200);
+  
+  Serial.print("Setting AP (Access Point)…");
+  // Remove the password parameter, if you want the AP (Access Point) to be open
+  WiFi.softAP(ssid, password);
 
-  String fv = WiFi.firmwareVersion();
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
 
-  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
+  // Print ESP8266 Local IP Address
+  Serial.println(WiFi.localIP()); 
 
-    Serial.println("Please upgrade the firmware");
+  // Route for root / web page
+  server.on("/buzzer/start", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(buzzerPin,HIGH);
+    request->send_P(200, "text/html","BUZZER STARTED");
+  });
+  server.on("/motor/stop", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(motorStopPin,HIGH);
+    request->send_P(200, "text/html","motor stoppped");
+  });
+  server.on("/motor/start", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(motorStopPin,LOW);
+    request->send_P(200, "text/html","motor Started");
+  });
+  server.on("/buzzer/stop", HTTP_GET, [](AsyncWebServerRequest *request){
+    digitalWrite(buzzerPin,LOW);
+    (200, "text/plain","stopped buzzer");
+  });
 
-  }
-  status = WiFi.beginAP(ssid, pass);
-  if (status != WL_AP_LISTENING) {
-    while (true);
-  }
-  delay(10000);
+  // Start server
   server.begin();
 }
+ 
+void loop(){  
 
-void loop() {
-  if (status != WiFi.status()) {
-    status = WiFi.status();
-
-    if (status == WL_AP_CONNECTED) {
-      Serial.println("Device connected to AP");
-    } else {
-      Serial.println("Device disconnected from AP");
-    }
-  }
-
-  WiFiClient client = server.available();   // listen for incoming clients
-
-  if (client) {
-    String currentLine = "";
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        if (c == '\n') {
-          if (currentLine.length() == 0) {
-            break;
-          }
-          else {
-            currentLine = "";
-          }
-        }
-        else if (c != '\r') {
-          currentLine += c;
-
-        }
-        if (currentLine.endsWith("GET /H")) {
-          digitalWrite(led, HIGH);
-        }
-        if (currentLine.endsWith("GET /L")) {
-          digitalWrite(led, LOW);
-        }
-      }
-    }
-    client.stop();
-  }
 }
